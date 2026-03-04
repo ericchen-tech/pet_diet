@@ -31,7 +31,7 @@ class DietScreen extends StatefulWidget {
 
 class _DietScreenState extends State<DietScreen> {
   // 🔑 請填入您的 API Key
-  static const String _apiKey = 'AIzaSyCbZh6TlBobIiEI63g-HTshQWE8n_y4lbw';
+  static const String _apiKey = 'AIzaSyB8ITaax6N-mownvcQ3oT3wqbmvPJr8v8I';
 
   bool _isLoading = false;
   Map<String, dynamic>? _nutritionData;
