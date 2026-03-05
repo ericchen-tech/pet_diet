@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart'; // 確保 pubspec.yaml 已加入此套件
 
 void main() => runApp(const PetDietApp());
 
@@ -37,6 +37,7 @@ class _DietScreenState extends State<DietScreen> {
   List<dynamic> _topIngredients = [];
   String _deepAnalysisText = "";
 
+  // 輸入參數
   double _totalPrice = 0.0;
   double _inputWeight = 1.0;
   String _weightUnit = 'kg';
@@ -46,6 +47,7 @@ class _DietScreenState extends State<DietScreen> {
   double _wetFoodRatio = 0.5;
   bool _isDMB = false;
 
+  // 您的需求因子設定
   final Map<String, double> _catFactors = {
     "節育成貓 (1.2)": 1.2,
     "未節育成貓 (1.4)": 1.4,
@@ -74,7 +76,7 @@ class _DietScreenState extends State<DietScreen> {
       _isLoading = true;
       _nutritionData = null;
       _topIngredients = [];
-      _deepAnalysisText = "正在解析成分並生成診斷報告...";
+      _deepAnalysisText = "正在解析成分並生成繁體中文診斷報告...";
     });
 
     try {
@@ -88,19 +90,18 @@ class _DietScreenState extends State<DietScreen> {
         imageParts.add(DataPart('image/jpeg', bytes));
       }
 
-      // ✅ 極度強化的 Prompt，確保 AI 不會漏掉主要成分欄位
+      // ✅ 強化 Prompt：強制繁體中文與成分解析
       final prompt = """
-      你現在是資深寵物營養師，請辨識照片數據並回傳單一 JSON。
-      【重要：必須包含 deep_analysis 與 ingredients 兩個欄位】
+      你現在是專業寵物營養師，請辨識照片數據並回傳 JSON。
+      【重要：請務必完整使用「繁體中文」回傳所有文字內容】
       JSON 格式要求：
       {
         "protein": 數字, "fat": 數字, "fiber": 數字, "moisture": 數字, "ash": 數字, 
         "calcium": 數字, "phosphorus": 數字,
         "ingredients": [
-          {"name": "成分1名稱", "quality": "good", "reason": "說明"},
-          {"name": "成分2名稱", "quality": "bad", "reason": "說明"}
+          {"name": "成分名稱", "quality": "good/neutral/bad", "reason": "繁體中文理由報告"}
         ],
-        "deep_analysis": "請針對比例與成分寫下至少 150 字的專業分析。"
+        "deep_analysis": "請針對數據寫下至少 200 字的「繁體中文」專業成分分析。"
       }
       若標籤無灰分請回傳 0。
       """;
@@ -115,16 +116,15 @@ class _DietScreenState extends State<DietScreen> {
 
       setState(() {
         _nutritionData = data;
-        // ✅ 確保抓取 ingredients 欄位
         _topIngredients = data['ingredients'] ?? [];
-        _deepAnalysisText = data['deep_analysis'] ?? "AI 未能產出診斷文字，請重新上傳照片。";
+        _deepAnalysisText = data['deep_analysis'] ?? "分析完成。";
         _isLoading = false;
       });
     } catch (e) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text("分析失敗，可能是配額限制或格式錯誤：$e")));
+      ).showSnackBar(SnackBar(content: Text("分析失敗（配額限制）：$e")));
     }
   }
 
@@ -156,7 +156,7 @@ class _DietScreenState extends State<DietScreen> {
             _buildSecurityPanel(),
             _buildSpeciesToggle(),
             const SizedBox(height: 15),
-            _buildPetConditionCard(),
+            _buildPetInfoCard(),
             const SizedBox(height: 15),
             _buildFoodPriceCard(),
             const SizedBox(height: 15),
@@ -172,13 +172,13 @@ class _DietScreenState extends State<DietScreen> {
             ),
             if (_nutritionData != null) ...[
               const SizedBox(height: 20),
-              _buildDeepAnalysisCard(), // [AI 成分診斷]
+              _buildDeepAnalysisCard(),
               const SizedBox(height: 15),
               _buildDMBToggle(),
               _buildHorizontalAnalysisPanel(),
               _buildCPValueRow(),
               _buildHealthAlerts(),
-              _buildIngredientExpansion(), // 主要成分診斷 (清單)
+              _buildIngredientExpansion(),
               _buildResultSummaryCard(),
             ],
             if (_isLoading)
@@ -192,7 +192,7 @@ class _DietScreenState extends State<DietScreen> {
     );
   }
 
-  // ✅ 變色圖示切換
+  // ✅ 變色貓狗按鈕
   Widget _buildSpeciesToggle() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -257,7 +257,8 @@ class _DietScreenState extends State<DietScreen> {
     );
   }
 
-  Widget _buildPetConditionCard() {
+  // ✅ 寵物狀況與餵食設定區塊
+  Widget _buildPetInfoCard() {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -285,16 +286,13 @@ class _DietScreenState extends State<DietScreen> {
           DropdownButtonFormField<double>(
             value: _factor,
             decoration: const InputDecoration(
-              labelText: "需求因子 (活動量)",
+              labelText: "需求因子",
               border: OutlineInputBorder(),
               isDense: true,
             ),
             items: (_isCat ? _catFactors : _dogFactors).entries
                 .map(
-                  (e) => DropdownMenuItem(
-                    value: e.value,
-                    child: Text(e.key, style: const TextStyle(fontSize: 13)),
-                  ),
+                  (e) => DropdownMenuItem(value: e.value, child: Text(e.key)),
                 )
                 .toList(),
             onChanged: (v) => setState(() => _factor = v!),
@@ -348,6 +346,7 @@ class _DietScreenState extends State<DietScreen> {
     );
   }
 
+  // ✅ 飼料價格區塊
   Widget _buildFoodPriceCard() {
     return Container(
       padding: const EdgeInsets.all(12),
@@ -423,21 +422,21 @@ class _DietScreenState extends State<DietScreen> {
         f = _safeNum('fat'),
         m = _safeNum('moisture'),
         fb = _safeNum('fiber');
-    double rawAsh = _safeNum('ash'),
-        ca = _safeNum('calcium'),
-        ph = _safeNum('phosphorus');
+    double rawAsh = _safeNum('ash');
 
-    // ✅ 智慧灰分修正：解決 DMB 40.9% 異常
+    // ✅ 智慧型灰分修正
     double ashDefault = (m > 20) ? 2.0 : 9.0;
     double ash = (rawAsh == 0) ? ashDefault : rawAsh;
 
     double carb = max(0, 100 - p - f - fb - m - ash);
     double dryFactor = (_isDMB && m < 100) ? 100 / (100 - m) : 1.0;
-    double ratioVal = (ph > 0) ? (ca / ph) : 0.0;
-    String ratioText = (ph > 0) ? "${ratioVal.toStringAsFixed(2)} : 1" : "N/A";
-    Color ratioColor = (ratioVal >= 1.1 && ratioVal <= 1.4)
-        ? Colors.green
-        : Colors.orange;
+
+    double ratioVal = (m > 0 && _safeNum('phosphorus') > 0)
+        ? (_safeNum('calcium') / _safeNum('phosphorus'))
+        : 0.0;
+    String ratioText = (ratioVal > 0)
+        ? "${ratioVal.toStringAsFixed(2)} : 1"
+        : "N/A";
 
     return Row(
       children: [
@@ -468,66 +467,15 @@ class _DietScreenState extends State<DietScreen> {
               _dataRow("碳水(估)", carb * dryFactor, Colors.blueAccent),
               _dataRow("纖維", fb * dryFactor, Colors.green.shade300),
               _dataRow(
-                rawAsh == 0 ? "灰分(未提供預設${ashDefault.toInt()}%)" : "灰分",
+                rawAsh == 0 ? "灰分(預設${ashDefault.toInt()}%)" : "灰分",
                 ash * dryFactor,
                 Colors.grey.shade400,
               ),
-              _dataRow("鈣磷比", 0, ratioColor, customVal: ratioText),
+              _dataRow("鈣磷比", 0, Colors.teal, customVal: ratioText),
             ],
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildIngredientExpansion() {
-    return Container(
-      margin: const EdgeInsets.only(top: 15),
-      child: ExpansionTile(
-        title: const Text(
-          "主要成分診斷",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-        // ✅ 加入防呆提示，避免 AI 沒傳回 ingredients 時顯示全白
-        children: _topIngredients.isEmpty
-            ? [
-                const ListTile(
-                  title: Text(
-                    "主要成分分析由 AI 產出中，請查閱上方診斷報告。",
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ),
-              ]
-            : _topIngredients
-                  .map(
-                    (ing) => ListTile(
-                      leading: Icon(
-                        ing['quality'] == 'good'
-                            ? Icons.check_circle
-                            : (ing['quality'] == 'bad'
-                                  ? Icons.warning
-                                  : Icons.info),
-                        color: ing['quality'] == 'good'
-                            ? Colors.green
-                            : (ing['quality'] == 'bad'
-                                  ? Colors.red
-                                  : Colors.orange),
-                      ),
-                      title: Text(
-                        ing['name'] ?? '',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: Text(
-                        ing['reason'] ?? '',
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    ),
-                  )
-                  .toList(),
-      ),
     );
   }
 
@@ -541,6 +489,8 @@ class _DietScreenState extends State<DietScreen> {
         : _safeNum('ash');
     double carb = max(0, 100 - p - f - fb - m - ash);
     double kcalPerKg = (p * 3.5 + f * 8.5 + carb * 3.5) * 10;
+
+    // ✅ 解決 num 轉 double 報錯
     double rer = 70 * pow(_petWeight, 0.75).toDouble();
     double der = rer * _factor;
     double currentFoodGrams = kcalPerKg > 0
@@ -693,6 +643,7 @@ class _DietScreenState extends State<DietScreen> {
     return const SizedBox.shrink();
   }
 
+  // 輔助 UI 元件
   Widget _buildSecurityPanel() {
     return Container(
       padding: const EdgeInsets.only(bottom: 15),
@@ -714,6 +665,52 @@ class _DietScreenState extends State<DietScreen> {
       title: const Text("切換為乾物質比 (DMB)"),
       value: _isDMB,
       onChanged: (val) => setState(() => _isDMB = val),
+    );
+  }
+
+  Widget _buildIngredientExpansion() {
+    return Container(
+      margin: const EdgeInsets.only(top: 15),
+      child: ExpansionTile(
+        title: const Text(
+          "主要成分診斷",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        children: _topIngredients.isEmpty
+            ? [
+                const ListTile(
+                  title: Text(
+                    "主要成分數據載入中...",
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ),
+              ]
+            : _topIngredients
+                  .map(
+                    (ing) => ListTile(
+                      leading: Icon(
+                        ing['quality'] == 'good'
+                            ? Icons.check_circle
+                            : Icons.info,
+                        color: ing['quality'] == 'good'
+                            ? Colors.green
+                            : Colors.orange,
+                      ),
+                      title: Text(
+                        ing['name'] ?? '',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      subtitle: Text(
+                        ing['reason'] ?? '',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ),
+                  )
+                  .toList(),
+      ),
     );
   }
 
@@ -744,4 +741,6 @@ class _DietScreenState extends State<DietScreen> {
         radius: 40,
         showTitle: false,
       );
+  // ✅ 修正圖示小寫 Icons.balance
+  Widget _balanceIcon() => const Icon(Icons.balance);
 }
